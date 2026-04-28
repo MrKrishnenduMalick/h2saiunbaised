@@ -7,6 +7,16 @@ from __future__ import annotations
 import textwrap, warnings
 warnings.filterwarnings("ignore")
 
+# ── Global plot quality ──────────────────────────────────────────────────
+import matplotlib as mpl
+mpl.rcParams["figure.dpi"] = 150
+mpl.rcParams["savefig.dpi"] = 150
+mpl.rcParams["font.family"] = "DejaVu Sans"
+mpl.rcParams["axes.titlesize"] = 13
+mpl.rcParams["axes.labelsize"] = 11
+mpl.rcParams["xtick.labelsize"] = 10
+mpl.rcParams["ytick.labelsize"] = 10
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -169,19 +179,61 @@ with cr:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(mcard("Missing", f"{df_raw.isnull().sum().sum()}", "#eab308"), unsafe_allow_html=True)
 
-# distribution chart
+# ── Distribution chart (crisp, high-DPI) ─────────────────────────────
 sh(f"📊 Distribution — {sensitive_col}")
 vc = df_raw[sensitive_col].value_counts()
-fig, (ax1,ax2) = plt.subplots(1,2,figsize=(10,3.5))
-colors = ["#2541b2","#6c63ff","#a78bfa","#c4b5fd"]
-ax1.bar(vc.index.astype(str), vc.values, color=colors[:len(vc)])
-ax1.set_title(f"{sensitive_col} — Count", fontweight="bold"); ax1.spines[["top","right"]].set_visible(False)
-ax2.pie(vc.values, labels=vc.index.astype(str), autopct="%1.1f%%",
-        colors=colors[:len(vc)], startangle=140, wedgeprops={"edgecolor":"white","linewidth":2})
-ax2.set_title(f"{sensitive_col} — Share", fontweight="bold")
-for a in (ax1,ax2): a.set_facecolor("#F0F4FF")
-fig.patch.set_facecolor("#F0F4FF"); plt.tight_layout()
-st.pyplot(fig); plt.close(fig)
+colors = ["#2541b2", "#6c63ff", "#a78bfa", "#c4b5fd"]
+
+fig, (ax1, ax2) = plt.subplots(
+    1, 2,
+    figsize=(11, 4),
+    dpi=150,
+    facecolor="#F0F4FF",
+)
+
+# ── Bar chart ──
+bars = ax1.bar(
+    vc.index.astype(str), vc.values,
+    color=colors[: len(vc)],
+    width=0.55,
+    edgecolor="white",
+    linewidth=1.2,
+)
+for bar, val in zip(bars, vc.values):
+    ax1.text(
+        bar.get_x() + bar.get_width() / 2,
+        bar.get_height() + 0.4,
+        str(val),
+        ha="center", va="bottom",
+        fontsize=11, fontweight="bold", color="#1a1f4e",
+    )
+ax1.set_title(f"{sensitive_col} — Count", fontweight="bold", pad=10)
+ax1.set_ylabel("Number of Records", labelpad=6)
+ax1.spines[["top", "right"]].set_visible(False)
+ax1.set_facecolor("#F0F4FF")
+ax1.yaxis.grid(True, linestyle="--", alpha=0.5)
+ax1.set_axisbelow(True)
+
+# ── Pie chart ──
+wedges, texts, autotexts = ax2.pie(
+    vc.values,
+    labels=vc.index.astype(str),
+    autopct="%1.1f%%",
+    colors=colors[: len(vc)],
+    startangle=140,
+    wedgeprops={"edgecolor": "white", "linewidth": 2.5},
+    textprops={"fontsize": 11},
+    pctdistance=0.78,
+)
+for at in autotexts:
+    at.set_fontweight("bold")
+    at.set_color("white")
+ax2.set_title(f"{sensitive_col} — Share", fontweight="bold", pad=10)
+ax2.set_facecolor("#F0F4FF")
+
+plt.tight_layout(pad=2.0)
+st.pyplot(fig, use_container_width=True)
+plt.close(fig)
 
 if not run_analysis:
     st.info("👈 Click **Run FairLens Analysis** in the sidebar when ready.")
